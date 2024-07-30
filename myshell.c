@@ -77,6 +77,12 @@ void redirect(int fd, char *path, int flag) {   // リダイレクト処理を�
   //        入力の場合 O_RDONLY
   //        出力の場合 O_WRONLY|O_TRUNC|O_CREAT
   //
+  close(fd);
+  int nfd = open(path,flag,0644);
+  if(nfd < 0){
+    perror(path);
+    exit(1);
+  }
 }
 
 void externalCom(char *args[]) {                // 外部コマンドを実行する
@@ -86,6 +92,12 @@ void externalCom(char *args[]) {                // 外部コマンドを実行�
     exit(1);                                    //     非常事態，親を終了
   }
   if (pid==0) {                                 //   子プロセスなら
+    if(ifile != NULL){
+      redirect(0,ifile,O_RDONLY);
+    }
+    if(ofile != NULL){
+      redirect(1,ofile,O_WRONLY|O_TRUNC|O_CREAT);
+    }
     execvp(args[0], args);                      //     コマンドを実行
     perror(args[0]);
     exit(1);
@@ -130,3 +142,46 @@ int main() {
   return 0;
 }
 
+/*実行例
+% make
+cc -D_GNU_SOURCE -Wall -std=c99 -o myshell myshell.c
+% ./myshell
+Command: echo aa > a.txt
+Command: cat a.txt
+aa
+Command: ls
+Makefile	README.pdf	myshell
+README.md	a.txt		myshell.c
+Command: ls > a.txt
+Command: cat a.txt
+Makefile
+README.md
+README.pdf
+a.txt
+myshell
+myshell.c
+Command: grep.md < a.txt
+grep.md: No such file or directory
+Command: grep .md < a.txt
+README.md
+Command: grep .md < a.txt > b.txt
+Command: cat b.txt
+README.md
+Command: grep .txt < b.txt
+Command: grep .md < c.txt
+c.txt: No such file or directory
+Command: echo cc > c.txt
+Command: cat c.txt
+cc
+Command: ls -l c.txt
+-rw-r--r--  1 mitunoiyuusi  staff  3  7 30 20:14 c.txt
+Command: chmod 444 c.txt
+Command: ls -l c.txt
+-r--r--r--  1 mitunoiyuusi  staff  3  7 30 20:14 c.txt
+Command: ls > c.txt
+c.txt: Permission denied
+Command: cat c.txt
+cc
+Command: grep .md < a.txt > c.txt
+c.txt: Permission denied
+*/
